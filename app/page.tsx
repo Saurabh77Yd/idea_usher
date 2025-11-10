@@ -1,65 +1,138 @@
-import Image from "next/image";
+import BlogCard from "./components/BlogCard";
+import { getBlogs } from "./lib/api";
+import Link from "next/link";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+async function BlogListingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const resolvedParams = await searchParams;
+  const page = Number(resolvedParams.page) || 1;
+
+  const { blogs, totalPages, currentPage, totalBlogs } = await getBlogs({
+    page,
+    limit: 6,
+  });
+
+  const generatePageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const maxVisiblePages = 5;
+
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      let start = Math.max(2, currentPage - 1);
+      let end = Math.min(totalPages - 1, currentPage + 1);
+      if (currentPage <= 2) end = 4;
+      if (currentPage >= totalPages - 1) start = totalPages - 3;
+      if (start > 2) pages.push("...");
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (end < totalPages - 1) pages.push("...");
+      pages.push(totalPages);
+    }
+    return pages;
+  };
+
+  const pageNumbers = generatePageNumbers();
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <section className="min-h-screen bg-gray-50 py-16 px-6">
+      {/* Page Header */}
+      <div className="text-center mb-12">
+        <h1 className="text-4xl md:text-5xl font-extrabold bg-linear-to-r from-blue-600 via-purple-500 to-pink-500 bg-clip-text text-transparent mb-3">
+          Latest Blogs
+        </h1>
+        <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+          Explore stories, tutorials, and insights from creative minds.
+        </p>
+      </div>
+
+      {/* Blog Grid */}
+      <div
+        className="
+          max-w-6xl mx-auto
+          grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3
+          gap-x-6 gap-y-8
+          place-items-stretch
+        "
+        >
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          {blogs.map((blog: any) => (
+            <div
+              key={blog.id}
+              className="flex w-full h-full"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+              <BlogCard blog={blog} />
+            </div>
+        ))}
+      </div>
+
+      {/* Pagination */}
+      <div className="flex flex-wrap justify-center items-center gap-3 mt-16">
+        {/* Previous */}
+        {currentPage > 1 ? (
+          <Link
+            href={`/?page=${currentPage - 1}`}
+            className="px-5 py-2.5 bg-linear-to-r from-gray-200 to-gray-100 text-gray-700 rounded-full shadow-sm hover:from-blue-100 hover:to-purple-100 hover:text-blue-600 transition-all"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            ← Previous
+          </Link>
+        ) : (
+          <span className="px-5 py-2.5 bg-gray-100 text-gray-400 rounded-full cursor-not-allowed">
+            ← Previous
+          </span>
+        )}
+
+        {/* Page Numbers */}
+        <div className="flex items-center gap-2 text-black">
+          {pageNumbers.map((pageNum, i) =>
+            pageNum === "..." ? (
+              <span key={`ellipsis-${i}`} className="text-gray-500 px-2">
+                ...
+              </span>
+            ) : (
+              <Link
+                key={pageNum}
+                href={`/?page=${pageNum}`}
+                className={`w-10 h-10 flex items-center justify-center rounded-full border transition-all ${
+                  currentPage === pageNum
+                    ? "bg-linear-to-r from-blue-600 to-purple-600 text-white shadow-md scale-105"
+                    : "border-gray-300 hover:bg-linear-to-r hover:from-blue-50 hover:to-purple-50 hover:border-blue-400 hover:text-blue-600"
+                }`}
+              >
+                {pageNum}
+              </Link>
+            )
+          )}
         </div>
-      </main>
-    </div>
+
+        {/* Next */}
+        {currentPage < totalPages ? (
+          <Link
+            href={`/?page=${currentPage + 1}`}
+            className="px-5 py-2.5 bg-linear-to-r from-gray-200 to-gray-100 text-gray-700 rounded-full shadow-sm hover:from-blue-100 hover:to-purple-100 hover:text-blue-600 transition-all"
+          >
+            Next →
+          </Link>
+        ) : (
+          <span className="px-5 py-2.5 bg-gray-100 text-gray-400 rounded-full cursor-not-allowed">
+            Next →
+          </span>
+        )}
+      </div>
+
+      {/* Footer Info */}
+      <div className="text-center mt-6 text-sm text-gray-500">
+        Page <span className="font-semibold text-gray-700">{currentPage}</span>{" "}
+        of {totalPages} •{" "}
+        <span className="font-semibold text-gray-700">{totalBlogs}</span> blogs
+      </div>
+    </section>
   );
 }
+
+export default BlogListingPage;
